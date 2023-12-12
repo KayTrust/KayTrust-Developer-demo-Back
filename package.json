@@ -1,10 +1,10 @@
 {
-  "name": "demo-back-japan",
-  "version": "0.1.0",
+  "name": "kaytrust-oss-demo-back",
+  "version": "0.1.5",
   "description": "",
   "main": "index.ts",
   "engines" : { 
-    "npm" : ">=8.0.0 <9.0.0",
+    "npm" : ">=8.0.0 <9.9.9",
     "node" : ">=16.0.0 <17.0.0"
   },
   "scripts": {
