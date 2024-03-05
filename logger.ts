@@ -7,7 +7,7 @@ const myFormat = printf(({ level, message, label, timestamp }: any) => {
 
 const logger = createLogger({
     format: combine(
-        label({ label: '⚡️ Demo Back Japan' }),
+        label({ label: '⚡️ Demo Back OSS KayTrust' }),
         timestamp(),
         myFormat
     ),

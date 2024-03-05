@@ -15,6 +15,8 @@ import HtmlCredentialCreatedSuccessfulProvider from "../templates/html/credentia
 import DIDReceivedNext from "../templates/html/DID-received-next";
 import DIDReceivedNextProvider from "../templates/html/DID-received-next-provider";
 import VCReceivedAsk from "../templates/html/VC-received-ask";
+import VCReceivedOpenDoor from "../templates/html/VC-received-opendoor";
+import VCReceivedOpenDoorImpostor from "../templates/html/VC-received-opendoor-impostor";
 import { Credential, Verifier, ProofTypeEthereum, EthCore } from '@kaytrust/verifiable-credentials';
 import { verifyData } from "../utils/credentials";
 
@@ -77,8 +79,7 @@ class IssuerClass {
             );
             const access_token = response.data.access_token;
             console.log(access_token);
-            const userId = '691fe734-a652-462e-b02c-d13ca765fc97'
-            const issuerDID = 'did:ev:bmM8eDSu4aHCUNu54nHHeqPY191qWrbiCub3H'; //DID managed and custody for KT Provider Enterprise grade security
+            const issuerDID = 'did:ev:cwML9WzSWXnqQgTaNLnhcHJH7tVXJmXxLXRRz'; //DID managed and custody for KT Provider Enterprise grade security KT Demo Provider
             const handle = uuidv4();
             const issuanceDate = new Date().toISOString();
             const claimObj = JSON.parse(claims as string);
@@ -94,12 +95,11 @@ class IssuerClass {
                   }]
             };
 
-            const msCredentials = 'http://credential.provider-back.kaytrust.id/ms-credential/credential';
+            const msCredentials = 'https://provider-back.kaytrust.id/ms-credential/credential';
             const resultCredentials: any = await axios.post(msCredentials, vc, {
                 headers: {
                     'Authorization': 'Bearer ' + access_token,
                     'Access-Control-Allow-Origin': '*',
-                    'user-id': userId,
                     'Content-Type': 'application/json'
                 }
             }).catch((error) => {
@@ -178,6 +178,56 @@ class IssuerClass {
                 } else {
                     this.socket.emit('shared-identity-ask', { content: 'You are a impostor', to: query.state });
                     res.status(200).send('You are a impostor');
+                }
+              },(error)=>{
+                new Error(error);
+                res.status(451).send('You are a impostor');
+              });
+
+        });
+
+        this.express.get("/open-door", async (req, res, next) => {
+            /** nodeRPC access for a blockchain network to use */
+            const nodeRPC = "https://polygon-mumbai.g.alchemy.com/v2/jLMUummm16stzMQjW1OB79IwuDjsJqS7";
+            /** chainID of the blockchain networtk to deploy this test */
+            const chainId = 80001;
+            const headers = undefined;
+
+            const ethCore = new EthCore(nodeRPC, process.env.PRIVATE_KEY, headers, 
+                {
+                    chainId: chainId,
+                    gasPrice: "95000000000",
+                });
+            const proofTypeEthereum = new ProofTypeEthereum(ethCore, {
+                identityManager: process.env.IDENTITY_MANAGER as string,
+                verificationRegistry: process.env.VERIFICATION_REGISTRY as string,
+                validDays: 0,
+              });
+            const verifiers = new Verifier(proofTypeEthereum);
+
+            let html = '';
+            const { query } = req;
+            if (!query.access_token) { res.status(401).send('<h1>access_token not satisfied</h1>'); return; }
+            const decodedJWT: any = jwt.decode(query.access_token as string);
+            const subject_did = decodedJWT?.sub;
+
+            logger.info(`Lo que llega en access_token: ${query.access_token} `);
+            logger.info(`Lo que llega del decodedJWT: ${JSON.stringify(decodedJWT)} `);
+
+            const credentialObj = new Credential(decodedJWT.presentation.verifiableCredential[0]);
+
+            (credentialObj.verifyProof(verifiers)).then((ok)=>{
+                if(ok){
+                    const name = decodedJWT.presentation.verifiableCredential[0].credentialSubject.name;
+                    this.socket.emit('shared-identity-opendoor', { content: {verified:true, name:name}, to: query.state });
+                    html = VCReceivedOpenDoor.replace('{name}', name);
+                    html = html.replace('{subject_did}', subject_did);
+                    res.status(200).send(html);
+                } else {
+                    html = VCReceivedOpenDoorImpostor;
+                    html = html.replace('{subject_did}', subject_did);
+                    this.socket.emit('shared-identity-opendoor', { content: {verified:false, name:'You are a impostor'}, to: query.state });
+                    res.status(200).send(html);
                 }
               },(error)=>{
                 new Error(error);

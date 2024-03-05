@@ -2,6 +2,10 @@ import { Issuer } from "openid-client";
 import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * Issuing VC using DID from the Provider to a specific DID for now.
+ */
+
 const load = async () => {
   const ktProviderIssuer = await Issuer.discover(
     "https://auth.kaytrust.id/auth/realms/demo-innovation-labs"
